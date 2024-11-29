@@ -22,7 +22,6 @@ public class Game extends AbstractRecord<Attribute> implements Serializable {
     public Game(String identifier, String provenance) {
         super(identifier, provenance);
         platforms = new LinkedList<>();
-        regionalSales = new LinkedList<>();
     }
 
     private String gameId;
@@ -32,37 +31,8 @@ public class Game extends AbstractRecord<Attribute> implements Serializable {
     private String publisherName;
     private String developerName;
     private List<String> platforms; // List of platforms, e.g., "PC", "Xbox", "PlayStation"
-    private List<SalesRegion> regionalSales; // List of sales by region
-    private double averageRating;
-    private int reviewCount;
+    private double globalSales; // Global sales in millions of copies
     private double price;
-
-    // Inner class to represent sales by region
-    public static class SalesRegion {
-        private String regionName;
-        private double copiesSold;
-
-        public SalesRegion(String regionName, double copiesSold) {
-            this.regionName = regionName;
-            this.copiesSold = copiesSold;
-        }
-
-        public String getRegionName() {
-            return regionName;
-        }
-
-        public void setRegionName(String regionName) {
-            this.regionName = regionName;
-        }
-
-        public double getCopiesSold() {
-            return copiesSold;
-        }
-
-        public void setCopiesSold(double copiesSold) {
-            this.copiesSold = copiesSold;
-        }
-    }
 
     // Getters and Setters
     public String getGameId() {
@@ -71,6 +41,16 @@ public class Game extends AbstractRecord<Attribute> implements Serializable {
 
     public void setGameId(String gameId) {
         this.gameId = gameId;
+    }
+
+    public void setGameIdFromSource(String id, String source) {
+        if ("steam".equalsIgnoreCase(source)) {
+            this.gameId = "steam_ID_" + id;
+        } else if ("vgsales".equalsIgnoreCase(source)) {
+            this.gameId = "vgsales_ID_" + id;
+        } else {
+            this.gameId = id; // Default case
+        }
     }
 
     public String getName() {
@@ -92,6 +72,20 @@ public class Game extends AbstractRecord<Attribute> implements Serializable {
 
     public void setReleaseYear(Integer releaseYear) {
         this.releaseYear = releaseYear;
+    }
+
+    public void setReleaseYearFromString(String releaseDate) {
+        if (releaseDate != null && !releaseDate.isEmpty()) {
+            try {
+                // Assume releaseDate is formatted as YYYY-MM-DD or YYYY
+                String year = releaseDate.length() > 4 ? releaseDate.substring(0, 4) : releaseDate;
+                this.releaseYear = Integer.parseInt(year);
+            } catch (NumberFormatException e) {
+                this.releaseYear = null; // Handle invalid dates
+            }
+        } else {
+            this.releaseYear = null;
+        }
     }
 
     public String getMainGenre() {
@@ -126,28 +120,18 @@ public class Game extends AbstractRecord<Attribute> implements Serializable {
         this.platforms = platforms;
     }
 
-    public List<SalesRegion> getRegionalSales() {
-        return regionalSales;
+    public void setPlatformsFromString(String platformsString) {
+        if (platformsString != null && !platformsString.isEmpty()) {
+            this.platforms = List.of(platformsString.split(",\\s*"));
+        }
     }
 
-    public void setRegionalSales(List<SalesRegion> regionalSales) {
-        this.regionalSales = regionalSales;
+    public double getGlobalSales() {
+        return globalSales;
     }
 
-    public double getAverageRating() {
-        return averageRating;
-    }
-
-    public void setAverageRating(double averageRating) {
-        this.averageRating = averageRating;
-    }
-
-    public int getReviewCount() {
-        return reviewCount;
-    }
-
-    public void setReviewCount(int reviewCount) {
-        this.reviewCount = reviewCount;
+    public void setGlobalSales(double globalSales) {
+        this.globalSales = globalSales;
     }
 
     public double getPrice() {
@@ -170,8 +154,7 @@ public class Game extends AbstractRecord<Attribute> implements Serializable {
         return recordProvenance;
     }
 
-    public void setAttributeProvenance(Attribute attribute,
-                                       Collection<String> provenance) {
+    public void setAttributeProvenance(Attribute attribute, Collection<String> provenance) {
         this.provenance.put(attribute, provenance);
     }
 
@@ -197,9 +180,7 @@ public class Game extends AbstractRecord<Attribute> implements Serializable {
     public static final Attribute PUBLISHER_NAME = new Attribute("PublisherName");
     public static final Attribute DEVELOPER_NAME = new Attribute("DeveloperName");
     public static final Attribute PLATFORMS = new Attribute("Platforms");
-    public static final Attribute REGIONAL_SALES = new Attribute("RegionalSales");
-    public static final Attribute AVERAGE_RATING = new Attribute("AverageRating");
-    public static final Attribute REVIEW_COUNT = new Attribute("ReviewCount");
+    public static final Attribute GLOBAL_SALES = new Attribute("GlobalSales");
     public static final Attribute PRICE = new Attribute("Price");
 
     @Override
@@ -218,12 +199,8 @@ public class Game extends AbstractRecord<Attribute> implements Serializable {
             return getDeveloperName() != null && !getDeveloperName().isEmpty();
         else if (attribute == PLATFORMS)
             return getPlatforms() != null && !getPlatforms().isEmpty();
-        else if (attribute == REGIONAL_SALES)
-            return getRegionalSales() != null && !getRegionalSales().isEmpty();
-        else if (attribute == AVERAGE_RATING)
-            return getAverageRating() > 0;
-        else if (attribute == REVIEW_COUNT)
-            return getReviewCount() > 0;
+        else if (attribute == GLOBAL_SALES)
+            return getGlobalSales() > 0;
         else if (attribute == PRICE)
             return getPrice() > 0;
         else
@@ -232,8 +209,8 @@ public class Game extends AbstractRecord<Attribute> implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("[Game %s: %s / %s / %d]", getIdentifier(), getName(),
-                getPublisherName(), getReleaseYear() != null ? getReleaseYear() : -1);
+        return String.format("[Game %s: %s / %s / %d / %.2fM]", getIdentifier(), getName(),
+                getPublisherName(), getReleaseYear() != null ? getReleaseYear() : -1, getGlobalSales());
     }
 
     @Override
